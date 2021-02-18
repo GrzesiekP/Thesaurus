@@ -1,13 +1,13 @@
 const coinMarketCapApiKey = "apiKey"
 
 function CRYPTO_USD_PRICE(cryptoTicker) {
-  return Thesaurus.cryptoPriceInUsd(cryptoTicker, coinMarketCapApiKey)
+    return Thesaurus.cryptoPriceInUsd(cryptoTicker, coinMarketCapApiKey)
 }
 
 function GOLD_PRICE(currency) {
-   return Thesaurus.goldPrice(currency)
+    return Thesaurus.goldPrice(currency)
 }
 
 function NNTFI_FUND_PRICE(fundType, fundName) {
-  return Thesaurus.nnTfiFundPrice(fundType, fundName)
+    return Thesaurus.nnTfiFundPrice(fundType, fundName)
 }
