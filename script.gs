@@ -1,6 +1,6 @@
 const coinMarketCapApiKey = "apiKey"
 
-function CRYPTO_PRICE_IN_USD(cryptoTicker) {
+function CRYPTO_USD_PRICE(cryptoTicker) {
   return Thesaurus.cryptoPriceInUsd(cryptoTicker, coinMarketCapApiKey)
 }
 
