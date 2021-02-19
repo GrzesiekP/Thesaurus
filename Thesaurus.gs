@@ -4,14 +4,26 @@ function THESAURUS_AVAILABLE() {
     return true;
 }
 
+/**
+ * Cena kryptowaluty w USD wg. kursu Coinmarketcap. Np. CRYPTO_USD_PRICE("BTC")
+ * @customfunction
+ */
 function CRYPTO_USD_PRICE(cryptoTicker) {
     return cryptoPriceInUsd_(cryptoTicker, coinMarketCapApiKey)
 }
 
+/**
+ * Cena złota w podaej walucie. Np. GOLD_PRICE(PLN)
+ * @customfunction
+ */
 function GOLD_PRICE(currency) {
     return goldPrice_(currency)
 }
 
+/**
+ * Wycena funduszy NNTFI w PLN. Np. NNTFI_FUND_PRICE("fundusze-obligacji";"nn-obligacji")
+ * @customfunction
+ */
 function NNTFI_FUND_PRICE(fundType, fundName) {
     return nnTfiFundPrice_(fundType, fundName)
 }
