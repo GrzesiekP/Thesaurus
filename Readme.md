@@ -12,15 +12,18 @@ Kod skrpytów gotowych do użycia jako custom functions w Arkuszach Google.
 Funkcja testowa sprawdzająca, czy skrypt działa.
 
 ### CRYPTO_USD_PRICE(cryptoTicker)
-Zwraca cenę wskazanej kryptowaluty w USD według kursu z CoinMarketCap. Wymaga podmiany `coinMarketCapApiKey`.
+Zwraca cenę wskazanej kryptowaluty w USD według kursu z CoinMarketCap. Wymaga podmiany `coinMarketCapApiKey`. 
+
 Przyklad: `=CRYPTO_USD_PRICE("ETH")`
 
 ### GOLD_PRICE(currency)
-Zwraca cenę złota w podanej walucie.
+Zwraca cenę złota w podanej walucie. 
+
 Przykład: `=GOLD_PRICE("PLN")`
 
 ### NNTFI_FUND_PRICE(fundType, fundName)
-Zwraca wecenę wskazanego funduszu NNTFI.
-Argumenty należy wziąc z URL strony funduszu. 
-Np. z `https://www.nntfi.pl/fundusze-inwestycyjne/fundusze-akcji/nn-akcji?unitsCategoryId=A` **fundType** to `fundusze-inwestycyjne`, a **fundName** to `nn-akcji`.
+Zwraca wecenę wskazanego funduszu NNTFI. 
+Argumenty należy wziąc z URL strony funduszu.  
+Np. z `https://www.nntfi.pl/fundusze-inwestycyjne/fundusze-akcji/nn-akcji?unitsCategoryId=A` **fundType** to `fundusze-inwestycyjne`, a **fundName** to `nn-akcji`. 
+
 Przykład `=NNTFI_FUND_PRICE("fundusze-inwestycyjne", "nn-akcji")`
