@@ -19,7 +19,7 @@ jobs:
           working_directory: ~/ThesaurusApi.Tests
           name: Run tests
           command: |
-	    dir
+		dir
             
 
 workflows:
