@@ -18,7 +18,7 @@ jobs:
           # Update this line with the directory that contains your tests project file
           working_directory: ~/
           name: Run tests
-          command: pwd
+          command: ls
             
 
 workflows:
