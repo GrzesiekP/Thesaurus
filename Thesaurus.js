@@ -1,4 +1,5 @@
 const coinMarketCapApiKey = "apiKey"
+const listingsLimit = 5000
 
 function THESAURUS_AVAILABLE() {
     return true;
@@ -29,7 +30,7 @@ function NNTFI_FUND_PRICE(fundType, fundName) {
 }
 
 function cryptoPriceInUsd_(cryptoTicker, apiKey) {
-    const url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
+    const url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=" + listingsLimit
 
     const requestOptions = {
         method: "GET",
