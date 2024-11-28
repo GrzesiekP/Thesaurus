@@ -1,91 +1,141 @@
-const coinMarketCapApiKey = "apiKey"
-const listingsLimit = 5000
+const CACHE_EXPIRATION = 60*60;
+const listingsLimit = 200;
 
-function THESAURUS_AVAILABLE() {
-    return true;
+/**
+ * Fetches the date when the cryptocurrency prices were last refreshed.
+ * @customfunction
+ * @returns {string} The last data load date in a readable format.
+ */
+function LAST_DATA_LOAD_DATE() {
+  const properties = PropertiesService.getScriptProperties();
+  const lastDataLoadDate = properties.getProperty("lastDataLoadDate");
+
+  if (!lastDataLoadDate) {
+    return "No data load has been performed yet.";
+  }
+
+  // Convert ISO date to a more readable format
+  const date = new Date(lastDataLoadDate);
+  return date.toLocaleString("pl-PL", { timeZone: "Europe/Warsaw" });
 }
 
 /**
- * Cena kryptowaluty w USD wg. kursu Coinmarketcap. Np. CRYPTO_USD_PRICE("BTC")
+ * Custom function to get API statistics usage.
  * @customfunction
+ * @returns {string} Usage statistics.
  */
-function CRYPTO_USD_PRICE(cryptoTicker) {
-    return cryptoPriceInUsd_(cryptoTicker, coinMarketCapApiKey)
+function CMC_STATS() {
+  const url = "https://pro-api.coinmarketcap.com/v1/key/info";
+  const requestOptions = {
+      method: "GET",
+      headers: {
+        "X-CMC_PRO_API_KEY": GetCoinMarketCapApiKey(),
+        "Accept": "application/json",
+      },
+      muteHttpExceptions: true,
+    };
+
+  const response = UrlFetchApp.fetch(url, requestOptions);
+  const data = JSON.parse(response.getContentText());
+
+  const usedToday = data.data.usage.current_day.credits_used || 0;
+  const usedThisMonth = data.data.usage.current_month.credits_used || 0;
+  const leftThisMonth = data.data.usage.current_month.credits_left || 0;
+  const resetDate = new Date(data.data.plan.credit_limit_monthly_reset_timestamp || 0);
+  const resetDateLocal = resetDate.toLocaleString("pl-PL", { timeZone: "Europe/Warsaw" });
+
+  return `Wykorzystano dziś ${usedToday}. W tym miesiącu wykorzystano ${usedThisMonth}, pozostało ${leftThisMonth}. Limit odnawia się ${resetDateLocal}`
 }
 
 /**
- * Cena złota w podaej walucie. Np. GOLD_PRICE(PLN)
+ * Fetches the USD price of a cryptocurrency (e.g., BTC) using CoinMarketCap API.
+ * @param {string} crypto_slug The name of the cryptocurrency (e.g., "bitcoin").
  * @customfunction
  */
-function GOLD_PRICE(currency) {
-    return goldPrice_(currency)
+function CRYPTO_USD_PRICE(crypto_slug) {
+  const slug = crypto_slug.toLowerCase();
+  const cache = CacheService.getScriptCache();
+
+  // Check if the price is already cached
+  const cachedPrice = cache.get(`crypto_${slug}`);
+  if (cachedPrice) {
+    console.log(`Price for ${slug} found in cache`);
+    return parseFloat(cachedPrice);
+  }
+
+  // If not cached, fetch data for all cryptocurrencies defined in the sheet
+  console.log(`Price for ${slug} not found in cache. Fetching new data.`);
+  const allSlugs = getAllCryptoSlugsFromSheet_();
+  const pricesDict = fetchCryptoPricesBySlugs_(allSlugs, GetCoinMarketCapApiKey());
+
+  // Cache the fetched prices
+  for (const [slug, price] of Object.entries(pricesDict)) {
+    cache.put(`crypto_${slug}`, price, CACHE_EXPIRATION);
+  }
+
+  // Return the requested ticker's price if it exists
+  if (pricesDict[slug]) {
+    return pricesDict[slug];
+  } else {
+    throw new Error(`Cryptocurrency "${slug}" not found in API data`);
+  }
 }
 
-/**
- * Wycena funduszy NNTFI w PLN. Np. NNTFI_FUND_PRICE("fundusze-obligacji";"nn-obligacji")
- * @customfunction
- */
-function NNTFI_FUND_PRICE(fundType, fundName) {
-    return nnTfiFundPrice_(fundType, fundName)
+function getAllCryptoSlugsFromSheet_() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Kursy");
+  const range = sheet.getRange("D7:D");
+  const values = range.getValues();
+  const slugs = values.flat().filter(slug => slug); // Flatten and filter out empty values
+  return slugs.map(slug => slug.toLowerCase());
 }
 
-function cryptoPriceInUsd_(cryptoTicker, apiKey) {
-    const url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=" + listingsLimit
+function fetchCryptoPricesBySlugs_(slugs, apiKey) {
+  const slugList = slugs.join(',');
+  const url = `https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?slug=${slugList}`;
 
-    const requestOptions = {
-        method: "GET",
-        "followRedirects": true,
-        "muteHttpExceptions": true,
-        headers: {
-            "X-CMC_PRO_API_KEY": apiKey
-        }
+  const requestOptions = {
+    method: "GET",
+    followRedirects: true,
+    muteHttpExceptions: true,
+    headers: {
+      "X-CMC_PRO_API_KEY": apiKey,
+    },
+  };
+
+  console.log(`Calling ${url}`);
+  const result = UrlFetchApp.fetch(url, requestOptions);
+  console.log(`API call completed`);
+  const content = JSON.parse(result.getContentText());
+
+  // Transform API response into a dictionary (slug -> price)
+  const pricesDict = {};
+  if (content.data) {
+    for (const cryptoData of Object.values(content.data)) {
+      const slug = cryptoData.slug.toLowerCase();
+      pricesDict[slug] = cryptoData.quote.USD.price;
     }
+  }
 
-    const result = UrlFetchApp.fetch(url, requestOptions)
-    const content = JSON.parse(result.getContentText())
-
-    const price = content.data.filter(c => c.symbol === cryptoTicker)[0].quote.USD.price
-
-    return price
+  return pricesDict;
 }
 
-function goldPrice_(currency) {
-    const url = "https://data-asg.goldprice.org/dbXRates/" + currency
+/**
+ * Fetches and caches CoinMarketCap API key usage stats.
+ * This helper function ensures a single API call is made.
+ * @returns {Object} The API usage statistics.
+ */
+function fetchAndCacheUsageStats_() {
+  const url = "https://pro-api.coinmarketcap.com/v1/key/info";
+    const requestOptions = {
+      method: "GET",
+      headers: {
+        "X-CMC_PRO_API_KEY": GetCoinMarketCapApiKey(),
+        "Accept": "application/json",
+      },
+      muteHttpExceptions: true,
+    };
 
-    const result = UrlFetchApp.fetch(url, requestOptions)
-
-    const parsedData = JSON.parse(result.getContentText())
-    const goldPrice = parsedData['items'][0]['xauPrice']
-
-    return goldPrice
-}
-
-function nnTfiFundPrice_(fundType, fundName) {
-    fundType = fundType.trim()
-    fundName = fundName.trim()
-    const url = "https://www.nntfi.pl/fundusze-inwestycyjne/" + fundType + "/" + fundName + "?unitsCategoryId=K"
-
-    const result = getHtmlTextinGS_(url)
-
-    const pattern = '<div class="end_date_price"><span class="fund_value">'
-    const startIndex = result.lastIndexOf(pattern) + pattern.length
-    const newString = result.substring(startIndex)
-    const endIndex = newString.indexOf(' <')
-    const priceString = newString.substr(0, endIndex).replace(',', '.')
-
-    const price = parseFloat(priceString)
-
-    return price
-}
-
-
-function getHtmlTextinGS_(url) {
-    return UrlFetchApp.fetch(url, requestOptions).getContentText()
-}
-
-const requestOptions = {
-    "method": "GET",
-    "followRedirects": true,
-    "mode": "no-cors",
-    "muteHttpExceptions": true
+    const response = UrlFetchApp.fetch(url, requestOptions);
+    const data = JSON.parse(response.getContentText());
+    return data
 }
