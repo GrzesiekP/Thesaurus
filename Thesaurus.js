@@ -158,5 +158,5 @@ function RELOAD_DATA() {
   const properties = PropertiesService.getScriptProperties();
   properties.setProperty("lastDataLoadDate", new Date().toISOString());
 
-  return "Data reloaded and cache updated.";
+  SpreadsheetApp.getActive().toast("Pomyślnie zaktualizowano kursy.");
 }
