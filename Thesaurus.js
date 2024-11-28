@@ -1,4 +1,4 @@
-const CACHE_EXPIRATION = 60*60;
+const CACHE_EXPIRATION = 30 * 24 * 60 * 60; // One month in seconds
 const listingsLimit = 200;
 
 /**
@@ -6,7 +6,7 @@ const listingsLimit = 200;
  * @customfunction
  * @returns {string} The last data load date in a readable format.
  */
-function LAST_DATA_LOAD_DATE() {
+function LAST_DATA_LOAD_DATE(trigger) {
   const properties = PropertiesService.getScriptProperties();
   const lastDataLoadDate = properties.getProperty("lastDataLoadDate");
 
@@ -24,7 +24,7 @@ function LAST_DATA_LOAD_DATE() {
  * @customfunction
  * @returns {string} Usage statistics.
  */
-function CMC_STATS() {
+function CMC_STATS(trigger) {
   const url = "https://pro-api.coinmarketcap.com/v1/key/info";
   const requestOptions = {
       method: "GET",
@@ -52,7 +52,7 @@ function CMC_STATS() {
  * @param {string} crypto_slug The name of the cryptocurrency (e.g., "bitcoin").
  * @customfunction
  */
-function CRYPTO_USD_PRICE(crypto_slug) {
+function CRYPTO_USD_PRICE(crypto_slug, trigger) {
   const slug = crypto_slug.toLowerCase();
   const cache = CacheService.getScriptCache();
 
@@ -138,4 +138,25 @@ function fetchAndCacheUsageStats_() {
     const response = UrlFetchApp.fetch(url, requestOptions);
     const data = JSON.parse(response.getContentText());
     return data
+}
+
+/**
+ * Reloads cryptocurrency data and updates the cache.
+ * @customfunction
+ */
+function RELOAD_DATA() {
+  const allSlugs = getAllCryptoSlugsFromSheet_();
+  const pricesDict = fetchCryptoPricesBySlugs_(allSlugs, GetCoinMarketCapApiKey());
+  const cache = CacheService.getScriptCache();
+
+  // Cache the fetched prices
+  for (const [slug, price] of Object.entries(pricesDict)) {
+    cache.put(`crypto_${slug}`, price, CACHE_EXPIRATION);
+  }
+
+  // Update the last data load date
+  const properties = PropertiesService.getScriptProperties();
+  properties.setProperty("lastDataLoadDate", new Date().toISOString());
+
+  return "Data reloaded and cache updated.";
 }
