@@ -1,4 +1,4 @@
-const CACHE_EXPIRATION = 30 * 24 * 60 * 60; // One month in seconds
+const CACHE_EXPIRATION = 2 * 60 * 60; // Two hours in seconds
 const listingsLimit = 200;
 
 /**
@@ -116,6 +116,10 @@ function fetchCryptoPricesBySlugs_(slugs, apiKey) {
     }
   }
 
+  // Update the last data load date
+  const properties = PropertiesService.getScriptProperties();
+  properties.setProperty("lastDataLoadDate", new Date().toISOString());
+
   return pricesDict;
 }
 
@@ -153,10 +157,6 @@ function RELOAD_DATA() {
   for (const [slug, price] of Object.entries(pricesDict)) {
     cache.put(`crypto_${slug}`, price, CACHE_EXPIRATION);
   }
-
-  // Update the last data load date
-  const properties = PropertiesService.getScriptProperties();
-  properties.setProperty("lastDataLoadDate", new Date().toISOString());
 
   SpreadsheetApp.getActive().toast("Pomyślnie zaktualizowano kursy.");
 }
